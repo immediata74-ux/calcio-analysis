@@ -1,20 +1,14 @@
-import './globals.css';
-
 export const metadata = {
   title: 'Calcio Analysis',
-  description: 'Analisi prudente di ammoniti, marcatori e corner con dati API-Football',
-};
-
-export const viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  themeColor: '#080808',
+  description: 'Top ammoniti, marcatori e corner con report Excel mobile-first'
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="it">
-      <body>{children}</body>
+      <body style={{ margin: 0, background: '#050505', color: '#fff', fontFamily: 'Arial, sans-serif' }}>
+        {children}
+      </body>
     </html>
   );
 }
