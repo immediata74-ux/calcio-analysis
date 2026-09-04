@@ -93,7 +93,7 @@ export default function Dashboard() {
   return (
     <main className="shell">
       <header className="hero">
-        <div className="eyebrow">Nuova app separata • Vercel • v0.5</div>
+        <div className="eyebrow">Nuova app separata • Vercel • v0.6</div>
         <h1>Calcio Analysis</h1>
         <p>Top Ammoniti, Marcatori e Corner con dati reali API-Football. Nessun dato mancante viene inventato o trasformato in zero.</p>
       </header>
@@ -120,10 +120,10 @@ export default function Dashboard() {
           <strong>Analisi prudente:</strong>{' '}
           {meta.scope === 'single_league'
             ? 'competizione selezionata: analizziamo le partite coperte di quella lega'
-            : `modalità Tutte: fino a ${meta.limits?.leagues || 8} competizioni supportate per Ammoniti/Marcatori e ${meta.limits?.cornerLeagues || 4} per Corner`}
-          {' '}• fallback giocatori su {meta.deepTeamsFetched || 0} squadre • storico corner fino a {meta.limits?.recentCornerMatchesPerTeam || 7} gare valide per squadra
+            : `modalità Tutte: fino a ${meta.limits?.leagues || 6} competizioni con storico dettagliato API-Football`}
+          {' '}• {meta.deepTeamsFetched || 0} squadre • fino a {meta.limits?.recentMatchesPerTeam || 6} gare recenti per squadra, con stagione precedente solo se serve a completare il campione
           {' '}• lineup ufficiali controllate su {meta.lineupFixturesChecked || 0} fixture.
-          {meta.scope !== 'single_league' && ' Per il Top Corner più completo seleziona una singola competizione.'}
+          {meta.diagnostics && ` Dettagli recuperati: ${meta.diagnostics.detailedBundles || 0} fixture, ${meta.diagnostics.aggregatedPlayerRows || 0} righe giocatore.`}
         </div>
       )}
 
