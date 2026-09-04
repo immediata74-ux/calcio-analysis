@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 const TABS = [
   { key: 'cards', label: '🟨 Ammoniti' },
@@ -20,54 +20,112 @@ export default function Dashboard() {
   const [tab, setTab] = useState('cards');
   const [date, setDate] = useState(localDateISO());
   const [fixtures, setFixtures] = useState([]);
+  const [league, setLeague] = useState('');
+  const [leagueOptions, setLeagueOptions] = useState([]);
   const [tops, setTops] = useState({ cards: [], scorers: [], corners: [] });
+  const [meta, setMeta] = useState(null);
   const [health, setHealth] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loadingFixtures, setLoadingFixtures] = useState(false);
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [message, setMessage] = useState('');
 
   const active = useMemo(() => tops[tab] || [], [tops, tab]);
+  const reportHref = `/api/report?date=${encodeURIComponent(date)}${league ? `&league=${encodeURIComponent(league)}` : ''}`;
 
-  useEffect(() => {
-    fetch('/api/health').then(r => r.json()).then(setHealth).catch(() => setHealth({ ok: false }));
-    fetch('/api/top').then(r => r.json()).then(setTops).catch(() => {});
-  }, []);
+  async function checkHealth() {
+    try {
+      const res = await fetch('/api/health', { cache: 'no-store' });
+      setHealth(await res.json());
+    } catch {
+      setHealth({ ok: false, apiKeyConfigured: false });
+    }
+  }
 
   async function loadFixtures() {
-    setLoading(true);
+    setLoadingFixtures(true);
     setMessage('');
+    setTops({ cards: [], scorers: [], corners: [] });
+    setMeta(null);
     try {
+      await checkHealth();
       const res = await fetch(`/api/fixtures?date=${encodeURIComponent(date)}`, { cache: 'no-store' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Errore nel caricamento');
-      setFixtures(data.fixtures || []);
+      const list = data.fixtures || [];
+      setFixtures(list);
+      const unique = [...new Map(list.map(f => [Number(f?.league?.id), f?.league?.name]).filter(([id]) => id)).entries()]
+        .map(([id, name]) => ({ id, name }))
+        .sort((a, b) => String(a.name).localeCompare(String(b.name), 'it'));
+      setLeagueOptions(unique);
+      if (league && !unique.some(x => String(x.id) === String(league))) setLeague('');
       setMessage(`${data.results || 0} partite caricate da API-Football.`);
     } catch (error) {
       setFixtures([]);
+      setLeagueOptions([]);
       setMessage(error.message);
     } finally {
-      setLoading(false);
+      setLoadingFixtures(false);
+    }
+  }
+
+  async function analyzeTops() {
+    setLoadingAnalysis(true);
+    setMessage('Analisi in corso: controllo copertura, giocatori, lineup e corner reali…');
+    try {
+      const query = new URLSearchParams({ date });
+      if (league) query.set('league', league);
+      const res = await fetch(`/api/analyze?${query.toString()}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Errore durante analisi');
+      setTops({ cards: data.cards || [], scorers: data.scorers || [], corners: data.corners || [] });
+      setMeta(data.meta || null);
+      if (data.meta?.leagueOptions?.length) setLeagueOptions(data.meta.leagueOptions);
+      setMessage(`Analisi completata: ${data.cards?.length || 0} ammoniti, ${data.scorers?.length || 0} marcatori, ${data.corners?.length || 0} corner.`);
+    } catch (error) {
+      setTops({ cards: [], scorers: [], corners: [] });
+      setMeta(null);
+      setMessage(error.message);
+    } finally {
+      setLoadingAnalysis(false);
     }
   }
 
   return (
     <main className="shell">
       <header className="hero">
-        <div className="eyebrow">Nuova app separata • Vercel</div>
+        <div className="eyebrow">Nuova app separata • Vercel • v0.4</div>
         <h1>Calcio Analysis</h1>
         <p>Top Ammoniti, Marcatori e Corner con dati reali API-Football. Nessun dato mancante viene inventato o trasformato in zero.</p>
       </header>
 
       <section className="toolbar">
         <input className="dateBox" aria-label="Data palinsesto" type="date" value={date} onChange={e => setDate(e.target.value)} />
-        <button className="button" onClick={loadFixtures} disabled={loading}>{loading ? 'Carico…' : 'Carica palinsesto'}</button>
-        <a className="download" href="/report-template.xlsx">Scarica Excel</a>
+        <button className="button" onClick={loadFixtures} disabled={loadingFixtures || loadingAnalysis}>{loadingFixtures ? 'Carico…' : 'Carica palinsesto'}</button>
+        <select className="leagueBox" value={league} onChange={e => setLeague(e.target.value)} disabled={!leagueOptions.length || loadingAnalysis}>
+          <option value="">Tutte • analisi prudente</option>
+          {leagueOptions.map(item => <option value={item.id} key={item.id}>{item.name}</option>)}
+        </select>
+        <button className="button primary" onClick={analyzeTops} disabled={loadingAnalysis || !fixtures.length}>{loadingAnalysis ? 'Analizzo…' : 'Analizza Top'}</button>
+        <a className={`download ${!meta ? 'disabledLink' : ''}`} href={meta ? reportHref : undefined} aria-disabled={!meta}>Scarica Excel report</a>
       </section>
 
       <div className="status">
         <strong>API-Football:</strong>{' '}
-        {health === null ? 'controllo…' : health.apiKeyConfigured ? 'chiave configurata lato server' : 'chiave non ancora configurata su Vercel'}
+        {health === null ? 'premi “Carica palinsesto”' : health.apiKeyConfigured ? 'chiave configurata lato server' : 'chiave non configurata su Vercel'}
         {message ? ` • ${message}` : ''}
       </div>
+
+      {meta && (
+        <div className="scopeNote">
+          <strong>Analisi prudente:</strong>{' '}
+          {meta.scope === 'single_league'
+            ? 'competizione selezionata: analizziamo le partite coperte di quella lega'
+            : `modalità Tutte: fino a ${meta.limits?.leagues || 8} competizioni per Ammoniti/Marcatori e ${meta.limits?.cornerLeagues || 2} per Corner`}
+          {' '}• storico corner fino a {meta.limits?.recentCornerMatchesPerTeam || 5} gare valide per squadra
+          {' '}• lineup ufficiali controllate su {meta.lineupFixturesChecked || 0} fixture.
+          {meta.scope !== 'single_league' && ' Per il Top Corner più completo seleziona una singola competizione.'}
+        </div>
+      )}
 
       <nav className="tabs" aria-label="Analisi">
         {TABS.map(item => (
@@ -80,31 +138,16 @@ export default function Dashboard() {
       <section>
         <div className="sectionHead">
           <h2>{TABS.find(x => x.key === tab)?.label}</h2>
-          <span>{active.length ? `${active.length} segnali` : 'nessun segnale forzato'}</span>
+          <span>{active.length ? `Top ${active.length}` : 'nessun segnale forzato'}</span>
         </div>
 
         {active.length === 0 ? (
           <div className="empty">
-            Il motore non mostra percentuali finché non dispone dello storico reale sufficiente. Questo è intenzionale: prima colleghiamo database e statistiche API-Football, poi generiamo i Top.
+            {meta ? 'Nessun candidato ha superato i controlli minimi con i dati disponibili per questa selezione.' : 'Carica il palinsesto e premi “Analizza Top”. Il motore esclude dati mancanti e campioni troppo piccoli invece di inventare percentuali.'}
           </div>
         ) : (
           <div className="grid two">
-            {active.map((item, i) => (
-              <article className="card" key={`${item.id || i}`}>
-                <div className="cardTop">
-                  <div>
-                    <div className="rank">#{i + 1}</div>
-                    <div className="name">{item.name}</div>
-                    <div className="meta">{item.fixture}</div>
-                  </div>
-                  <div className="percent">{item.percent}%</div>
-                </div>
-                <div className="badges">
-                  <span className="badge">Affidabilità: {item.confidence}</span>
-                  <span className="badge">Campione: {item.sample}</span>
-                </div>
-              </article>
-            ))}
+            {active.map((item, i) => <SignalCard key={item.id || i} item={item} rank={i + 1} kind={tab} />)}
           </div>
         )}
       </section>
@@ -114,10 +157,10 @@ export default function Dashboard() {
           <h2>Palinsesto caricato</h2>
           <span>{fixtures.length} partite</span>
         </div>
-        <div className="card">
+        <div className="card fixtureList">
           {fixtures.length === 0 ? (
             <div className="meta">Seleziona una data e premi “Carica palinsesto”.</div>
-          ) : fixtures.slice(0, 40).map(f => (
+          ) : fixtures.slice(0, 60).map(f => (
             <div className="fixture" key={f.fixture?.id}>
               <div className="fixtureTeams">{f.teams?.home?.name || 'N.D.'} — {f.teams?.away?.name || 'N.D.'}</div>
               <div className="fixtureMeta">{f.league?.name || 'Competizione N.D.'} • {formatKickoff(f.fixture?.date)}</div>
@@ -126,8 +169,56 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <p className="footerNote">Stato dati previsto: AVAILABLE, MISSING, INSUFFICIENT_SAMPLE, NOT_SUPPORTED. I Top entreranno in classifica solo quando il campione supera le soglie minime definite dal motore.</p>
+      <p className="footerNote">Stati dati: AVAILABLE, MISSING, INSUFFICIENT_SAMPLE, NOT_SUPPORTED. Le percentuali sono stime statistiche, non certezze; i null API-Football restano null e non diventano zero.</p>
     </main>
+  );
+}
+
+function SignalCard({ item, rank, kind }) {
+  const d = item.details || {};
+  return (
+    <article className="card signalCard">
+      <div className="cardTop">
+        <div>
+          <div className="rank">#{rank} • {item.league || 'N.D.'}</div>
+          <div className="name">{item.name}</div>
+          <div className="meta">{item.fixture}</div>
+        </div>
+        <div className="percent">{item.percent ?? '—'}%</div>
+      </div>
+      <div className="badges">
+        <span className="badge">Affidabilità: {item.confidence}</span>
+        <span className="badge">Campione: {item.sample}</span>
+        {d.lineup && <span className={`badge lineup ${String(d.lineup).toLowerCase()}`}>{d.lineup}</span>}
+        <span className="badge ok">{item.status}</span>
+      </div>
+      {kind === 'cards' && (
+        <div className="details">
+          <span>Gialli: <b>{d.yellow ?? 'N.D.'}</b></span>
+          <span>Gialli/90: <b>{d.rate90 ?? 'N.D.'}</b></span>
+          <span>Minuti stimati: <b>{d.expectedMinutes ?? 'N.D.'}</b></span>
+          <span>Rossi: <b>{d.red ?? 'N.D.'}</b></span>
+        </div>
+      )}
+      {kind === 'scorers' && (
+        <div className="details">
+          <span>Gol: <b>{d.goals ?? 'N.D.'}</b></span>
+          <span>Gol/90: <b>{d.rate90 ?? 'N.D.'}</b></span>
+          <span>Minuti stimati: <b>{d.expectedMinutes ?? 'N.D.'}</b></span>
+        </div>
+      )}
+      {kind === 'corners' && (
+        <div className="details cornersGrid">
+          <span>Attesi: <b>{d.expectedCorners ?? 'N.D.'}</b></span>
+          <span>O7.5: <b>{d.over75 ?? '—'}%</b></span>
+          <span>O8.5: <b>{d.over85 ?? '—'}%</b></span>
+          <span>O9.5: <b>{d.over95 ?? '—'}%</b></span>
+          <span>O10.5: <b>{d.over105 ?? '—'}%</b></span>
+          <span>O11.5: <b>{d.over115 ?? '—'}%</b></span>
+        </div>
+      )}
+      <div className="modelNote">{d.model}</div>
+    </article>
   );
 }
 

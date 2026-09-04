@@ -1,51 +1,43 @@
-# Calcio Analysis — Vercel
+# Calcio Analysis — Vercel v0.4
 
-Nuova app indipendente, pensata per Vercel e smartphone.
+Nuova app **separata** mobile-first, sfondo nero, per:
+- Top Ammoniti / cartellini
+- Top Marcatori
+- Top Corner
+- Excel con fogli Report, Ammoniti, Marcatori, Corner
 
-## Stack
+## Variabile obbligatoria Vercel
 
-- Next.js 16.3.3 / App Router
-- Vercel Functions tramite Route Handlers
-- API-Football solo lato server
-- Neon Postgres previsto per lo storico e i ranking
-- Excel scuro in `public/report-template.xlsx`
+`APIFOOTBALL_KEY` = chiave API-Football / API-Sports.
 
-## Regole dati
+## Novità v0.4
 
-- Nessun dato mancante viene trasformato in zero.
-- Nessuna percentuale viene inventata.
-- Stati: `AVAILABLE`, `MISSING`, `INSUFFICIENT_SAMPLE`, `NOT_SUPPORTED`.
-- I Top Ammoniti, Marcatori e Corner restano vuoti finché non è disponibile un campione reale sufficiente.
+1. **Carica palinsesto** con `/fixtures?date=...`.
+2. Filtro opzionale per singola competizione.
+3. Prima dell'analisi controlla la **coverage** della lega/stagione.
+4. **Ammoniti**: candidati reali da `/players/topyellowcards`, tasso gialli/90 regolarizzato, minuti medi reali. I giocatori usati da subentranti non vengono gonfiati artificialmente.
+5. **Marcatori**: candidati reali da `/players/topscorers`, gol/90 regolarizzato e probabilità di almeno un gol.
+6. **Lineup**: quando API-Football ha già pubblicato le formazioni, il motore distingue `TITOLARE`, `PANCHINA` e giocatore non presente. Un giocatore in panchina riceve minuti attesi ridotti; un giocatore escluso dalla formazione non entra nel Top.
+7. **Corner**: storico della stessa lega, fino a 5 gare valide recenti per squadra. Le fixture storiche sono scaricate in batch fino a 20 ID per richiesta; `Corner Kicks` mancanti restano mancanti.
+8. **Excel automatico** con 4 fogli e gli stessi Top dell'app.
 
-## Avvio locale
+## Regole prudenziali
 
-```bash
-cp .env.example .env.local
-npm install
-npm run dev
-```
+- `null` non diventa mai zero.
+- Giocatori con meno di 270 minuti o 3 presenze vengono esclusi.
+- Corner: minimo 3 gare con statistiche corner valide per entrambe le squadre.
+- Le percentuali sono stime statistiche e non certezze.
+- Modalità **Tutte**: massimo 8 competizioni per Ammoniti/Marcatori e 2 competizioni coperte per Corner per contenere quota e tempi.
+- Se vuoi il Top Corner più completo, seleziona una singola competizione prima di premere **Analizza Top**.
+- Le risposte storiche vengono cacheate da Next/Vercel.
 
-Apri `http://localhost:3000`.
+## Aggiornamento su Vercel
 
-## Deploy Vercel
+Carica questa versione come nuovo deployment dello **stesso progetto Calcio Analysis**. Non creare o modificare gli altri progetti. La variabile `APIFOOTBALL_KEY` resta nel progetto Vercel e non va inserita nei file.
 
-1. Crea un NUOVO progetto Vercel, separato dall'app attuale.
-2. Collega questo progetto a un repository GitHub dedicato.
-3. In Vercel → Project → Settings → Environment Variables aggiungi:
-   - `APIFOOTBALL_KEY`
-4. Esegui il deploy.
-
-Non usare un nome `NEXT_PUBLIC_...` per la chiave API-Football: deve rimanere server-side.
-
-## Database — prossimo blocco
-
-Aggiungere Neon Postgres dal Vercel Marketplace e configurare `DATABASE_URL`. Poi implementare:
-
-- ingestione palinsesto;
-- storico giocatori e squadre;
-- statistiche cartellini;
-- statistiche marcatori/minuti;
-- statistiche corner;
-- motori di scoring prudente;
-- generazione Excel con i risultati del giorno;
-- job Vercel Cron per refresh programmati.
+Dopo il deployment:
+1. `Carica palinsesto`.
+2. opzionalmente scegli una competizione.
+3. `Analizza Top`.
+4. passa tra Ammoniti / Marcatori / Corner.
+5. `Scarica Excel report`.
