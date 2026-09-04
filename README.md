@@ -1,18 +1,12 @@
-# Calcio Analysis v0.7
+# Calcio Analysis v0.9
 
-Nuova app separata per Vercel con API-Football.
+App Next.js separata per Vercel, mobile-first, sfondo nero.
 
-## Novità v0.7
+## Fix v0.9
+- seleziona prima le competizioni del palinsesto con coverage reale API-Football;
+- Ammoniti e Marcatori: Top/players stagionali; se non bastano, fallback sugli **eventi reali delle ultime 5 gare** delle squadre (gol e cartellini), con stima Wilson prudente;
+- Corner: prova il batch `/fixtures?ids`; se il piano/competizione non include il blocco `statistics`, usa esplicitamente `/fixtures/statistics?fixture=...`;
+- autogol esclusi dai marcatori; null mai convertiti in zero;
+- diagnostica visibile per capire quante fixture hanno eventi/statistiche reali.
 
-- rimosso il filtro rigido di coverage che poteva lasciare `0 squadre` anche con centinaia di fixture;
-- l'analisi parte direttamente dalle squadre del palinsesto selezionato;
-- recupera le ultime 6 gare reali per squadra con `/fixtures?team=...&last=6`;
-- carica i dettagli fixture in batch con `ids` (eventi, lineup, statistiche e giocatori quando disponibili);
-- fallback prudente su statistiche stagionali reali `/players?team=...&season=...` solo quando le fixture recenti non hanno statistiche giocatore;
-- corner calcolati solo con almeno 3 gare recenti valide per entrambe le squadre;
-- nessun `null` viene trasformato in zero;
-- diagnostica visibile nell'app per capire quante squadre/fixture/statistiche sono state davvero recuperate.
-
-## Variabile Vercel
-
-`APIFOOTBALL_KEY`
+Variabile Vercel: `APIFOOTBALL_KEY`.

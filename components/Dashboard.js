@@ -93,7 +93,7 @@ export default function Dashboard() {
   return (
     <main className="shell">
       <header className="hero">
-        <div className="eyebrow">Nuova app separata • Vercel • v0.7</div>
+        <div className="eyebrow">Nuova app separata • Vercel • v0.9</div>
         <h1>Calcio Analysis</h1>
         <p>Top Ammoniti, Marcatori e Corner con dati reali API-Football. Nessun dato mancante viene inventato o trasformato in zero.</p>
       </header>
@@ -119,11 +119,12 @@ export default function Dashboard() {
         <div className="scopeNote">
           <strong>Analisi prudente:</strong>{' '}
           {meta.scope === 'single_league'
-            ? 'competizione selezionata: analizziamo le partite coperte di quella lega'
-            : `modalità Tutte: fino a ${meta.limits?.upcomingFixtures || 10} partite distribuite su più competizioni`}
-          {' '}• {meta.deepTeamsFetched || 0} squadre • fino a {meta.limits?.recentMatchesPerTeam || 6} gare recenti per squadra
+            ? 'competizione selezionata: usiamo solo i mercati realmente coperti da API-Football'
+            : 'modalità Tutte: scegliamo automaticamente le competizioni del palinsesto con coverage reale più completa'}
+          {' '}• {meta.analyzedLeagues?.length || 0} competizioni analizzate • {meta.deepTeamsFetched || 0} squadre controllate come fallback
           {' '}• lineup ufficiali controllate su {meta.lineupFixturesChecked || 0} fixture.
-          {meta.diagnostics && ` Storico: ${meta.diagnostics.teamsWithHistory || 0}/${meta.diagnostics.teamHistoryCalls || 0} squadre. Dettagli: ${meta.diagnostics.detailedBundles || 0} fixture (${meta.diagnostics.detailedPlayerBundles || 0} con giocatori, ${meta.diagnostics.detailedStatsBundles || 0} con statistiche). Fallback stagionale riuscito: ${meta.diagnostics.seasonFallbackTeamsWithRows || 0}/${meta.diagnostics.seasonFallbackTeamsTried || 0}. Righe giocatore: ${meta.diagnostics.aggregatedPlayerRows || 0}.`}
+          {meta.diagnostics && ` Coverage: ${meta.diagnostics.supportedGroups || 0}/${meta.diagnostics.fixtureLeagueGroups || 0} competizioni supportate. Top API: ${meta.diagnostics.topCardsCallsOk || 0} cartellini, ${meta.diagnostics.topScorersCallsOk || 0} marcatori. Rose: ${meta.diagnostics.deepTeamsWithEntries || 0}/${meta.diagnostics.deepTeamsTried || 0}. Eventi fallback: ${meta.diagnostics.eventFallbackFixturesWithEvents || 0} fixture con eventi. Corner: ${meta.diagnostics.cornerValidStatsFixtures || 0} fixture con statistiche (${meta.diagnostics.cornerExplicitStatsCalls || 0} chiamate esplicite).`}
+          {meta.analyzedLeagues?.length ? <span className="coverageNames"> Competizioni scelte: {meta.analyzedLeagues.slice(0, 8).map(x => x.name).join(', ')}.</span> : null}
         </div>
       )}
 
