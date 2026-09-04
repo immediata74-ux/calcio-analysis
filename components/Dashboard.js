@@ -93,13 +93,13 @@ export default function Dashboard() {
   return (
     <main className="shell">
       <header className="hero">
-        <div className="eyebrow">Nuova app separata • Vercel • v0.6</div>
+        <div className="eyebrow">Nuova app separata • Vercel • v0.7</div>
         <h1>Calcio Analysis</h1>
         <p>Top Ammoniti, Marcatori e Corner con dati reali API-Football. Nessun dato mancante viene inventato o trasformato in zero.</p>
       </header>
 
       <section className="toolbar">
-        <input className="dateBox" aria-label="Data palinsesto" type="date" value={date} onChange={e => setDate(e.target.value)} />
+        <input className="dateBox" aria-label="Data palinsesto" type="date" value={date} onChange={e => { setDate(e.target.value); setFixtures([]); setTops({ cards: [], scorers: [], corners: [] }); setMeta(null); setMessage(''); }} />
         <button className="button" onClick={loadFixtures} disabled={loadingFixtures || loadingAnalysis}>{loadingFixtures ? 'Carico…' : 'Carica palinsesto'}</button>
         <select className="leagueBox" value={league} onChange={e => setLeague(e.target.value)} disabled={!leagueOptions.length || loadingAnalysis}>
           <option value="">Tutte • analisi prudente</option>
@@ -120,10 +120,10 @@ export default function Dashboard() {
           <strong>Analisi prudente:</strong>{' '}
           {meta.scope === 'single_league'
             ? 'competizione selezionata: analizziamo le partite coperte di quella lega'
-            : `modalità Tutte: fino a ${meta.limits?.leagues || 6} competizioni con storico dettagliato API-Football`}
-          {' '}• {meta.deepTeamsFetched || 0} squadre • fino a {meta.limits?.recentMatchesPerTeam || 6} gare recenti per squadra, con stagione precedente solo se serve a completare il campione
+            : `modalità Tutte: fino a ${meta.limits?.upcomingFixtures || 10} partite distribuite su più competizioni`}
+          {' '}• {meta.deepTeamsFetched || 0} squadre • fino a {meta.limits?.recentMatchesPerTeam || 6} gare recenti per squadra
           {' '}• lineup ufficiali controllate su {meta.lineupFixturesChecked || 0} fixture.
-          {meta.diagnostics && ` Dettagli recuperati: ${meta.diagnostics.detailedBundles || 0} fixture, ${meta.diagnostics.aggregatedPlayerRows || 0} righe giocatore.`}
+          {meta.diagnostics && ` Storico: ${meta.diagnostics.teamsWithHistory || 0}/${meta.diagnostics.teamHistoryCalls || 0} squadre. Dettagli: ${meta.diagnostics.detailedBundles || 0} fixture (${meta.diagnostics.detailedPlayerBundles || 0} con giocatori, ${meta.diagnostics.detailedStatsBundles || 0} con statistiche). Fallback stagionale riuscito: ${meta.diagnostics.seasonFallbackTeamsWithRows || 0}/${meta.diagnostics.seasonFallbackTeamsTried || 0}. Righe giocatore: ${meta.diagnostics.aggregatedPlayerRows || 0}.`}
         </div>
       )}
 
